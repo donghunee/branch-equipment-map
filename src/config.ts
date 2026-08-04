@@ -16,7 +16,8 @@ export const SHEET_CSV_URL =
  * 위 게시 주소의 `2PACX-...` 는 게시 전용 ID 라서 편집 주소를 유추할 수 없다.
  * 그래서 이 값을 채워두면 그 주소로, 비어 있으면 게시된 읽기 전용 화면으로 연결한다.
  */
-export const SHEET_EDIT_URL = ''
+export const SHEET_EDIT_URL =
+  'https://docs.google.com/spreadsheets/d/1X7Eb3zIRRYevuaYCxA6s0dYjvVev10NhNb1tiG37YfY/edit?gid=0#gid=0'
 
 /** 화면에서 '구글 시트' 를 눌렀을 때 열릴 주소. */
 export const SHEET_LINK_URL = SHEET_EDIT_URL || SHEET_CSV_URL.replace(/\?output=csv$/, '')
