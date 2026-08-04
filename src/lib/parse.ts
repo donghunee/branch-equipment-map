@@ -137,3 +137,30 @@ export async function parseUrl(url: string): Promise<Branch[]> {
   if (!res.ok) throw new Error(`기본 엑셀 파일을 불러오지 못했습니다 (${res.status})`)
   return parseWorkbook(XLSX.read(await res.arrayBuffer(), { type: 'array' }))
 }
+
+/**
+ * 구글 스프레드시트의 '웹에 게시' CSV 를 읽는다.
+ * 시트도 첫 행이 열 이름이므로 엑셀과 똑같은 열 매칭 로직을 그대로 쓴다.
+ */
+export async function parseSheetCsv(url: string): Promise<Branch[]> {
+  let res: Response
+  try {
+    res = await fetch(url, { cache: 'no-store' })
+  } catch {
+    throw new Error(
+      '구글 시트에 연결하지 못했습니다.\n' +
+        '시트가 "웹에 게시" 상태인지, 인터넷 연결이 되는지 확인해 주세요.',
+    )
+  }
+  if (!res.ok) throw new Error(`구글 시트를 불러오지 못했습니다 (${res.status})`)
+
+  const text = await res.text()
+  // 게시되지 않은 시트는 CSV 대신 로그인/오류 HTML 을 돌려준다.
+  if (/^\s*</.test(text)) {
+    throw new Error(
+      '구글 시트가 "웹에 게시" 상태가 아닌 것 같습니다.\n' +
+        '시트에서 [파일 → 공유 → 웹에 게시] 를 다시 확인해 주세요.',
+    )
+  }
+  return parseWorkbook(XLSX.read(text, { type: 'string' }))
+}

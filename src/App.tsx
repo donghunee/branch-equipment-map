@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, FileSpreadsheet, MapPinOff, Upload } from 'lucide-react'
+import {
+  CircleAlert,
+  ExternalLink,
+  FileSpreadsheet,
+  MapPinOff,
+  RefreshCw,
+  Upload,
+} from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,22 +15,24 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { BranchDetailDialog } from '@/components/BranchDetailDialog'
 import { BranchTable } from '@/components/BranchTable'
 import { MapView } from '@/components/MapView'
+import { SHEET_CSV_URL, SHEET_EDIT_URL } from '@/config'
 import { geocodeBranches } from '@/lib/geocode'
-import { parseFile, parseUrl, type Branch } from '@/lib/parse'
+import { parseFile, parseSheetCsv, type Branch } from '@/lib/parse'
 import { isAbnormal } from '@/lib/status'
 
 type Status = 'idle' | 'parsing' | 'geocoding'
 
-/** 앱과 함께 배포되는 기본 데이터. 첫 화면에서 자동으로 불러온다. */
-const DEFAULT_FILE = '주소정보.xlsx'
+const SHEET_LABEL = '구글 시트'
 
 export default function App() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [selected, setSelected] = useState<Branch | null>(null)
-  const [status, setStatus] = useState<Status>('parsing') // 첫 화면부터 기본 데이터를 읽는다
+  // 시트 주소가 설정돼 있으면 첫 화면부터 읽는다.
+  const [status, setStatus] = useState<Status>(SHEET_CSV_URL ? 'parsing' : 'idle')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [fileName, setFileName] = useState(DEFAULT_FILE)
+  const [fileName, setFileName] = useState(SHEET_CSV_URL ? SHEET_LABEL : '')
+  const [fromSheet, setFromSheet] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function load(label: string, getBranches: () => Promise<Branch[]>) {
@@ -51,15 +60,17 @@ export default function App() {
     }
   }
 
-  // 기본 데이터 자동 로딩. 파일이 없으면 조용히 파일 선택 화면으로 넘어간다.
+  function loadSheet() {
+    setFromSheet(true)
+    void load(SHEET_LABEL, () => parseSheetCsv(SHEET_CSV_URL)).catch(() => {})
+  }
+
+  // 첫 화면에서 구글 시트를 자동으로 읽는다.
   const loadedOnce = useRef(false)
   useEffect(() => {
-    if (loadedOnce.current) return // StrictMode 이중 실행 방지
+    if (loadedOnce.current || !SHEET_CSV_URL) return // StrictMode 이중 실행 방지
     loadedOnce.current = true
-    load(DEFAULT_FILE, () => parseUrl(`${import.meta.env.BASE_URL}${DEFAULT_FILE}`)).catch(() => {
-      setError(null)
-      setFileName('')
-    })
+    loadSheet()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -80,16 +91,35 @@ export default function App() {
           onChange={(e) => {
             const file = e.target.files?.[0]
             e.target.value = '' // 같은 파일을 다시 골라도 동작하도록
-            if (file) void load(file.name, () => parseFile(file)).catch(() => {})
+            if (file) {
+              setFromSheet(false)
+              void load(file.name, () => parseFile(file)).catch(() => {})
+            }
           }}
         />
+
+        {SHEET_CSV_URL && (
+          <Button size="sm" disabled={busy} onClick={loadSheet}>
+            <RefreshCw className={busy ? 'animate-spin' : undefined} />
+            {fromSheet && branches.length > 0 ? '최신 내용 새로고침' : '구글 시트 불러오기'}
+          </Button>
+        )}
+
+        {SHEET_EDIT_URL && (
+          <Button size="sm" variant="outline" asChild>
+            <a href={SHEET_EDIT_URL} target="_blank" rel="noopener noreferrer">
+              <ExternalLink /> 시트 열어 수정
+            </a>
+          </Button>
+        )}
+
         <Button
           size="sm"
-          variant={branches.length > 0 ? 'outline' : 'default'}
+          variant={SHEET_CSV_URL ? 'ghost' : 'default'}
           disabled={busy}
           onClick={() => inputRef.current?.click()}
         >
-          <Upload /> {branches.length > 0 ? '다른 엑셀 파일 선택' : '엑셀 파일 선택'}
+          <Upload /> 엑셀 파일로 보기
         </Button>
 
         {fileName && (
@@ -129,7 +159,7 @@ export default function App() {
         <div className="px-5 pt-4">
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertTitle>엑셀을 읽지 못했습니다</AlertTitle>
+            <AlertTitle>데이터를 읽지 못했습니다</AlertTitle>
             <AlertDescription className="whitespace-pre-wrap">{error}</AlertDescription>
           </Alert>
         </div>
@@ -140,7 +170,7 @@ export default function App() {
           <MapView branches={branches} selected={selected} onSelect={setSelected} />
           {branches.length === 0 && busy && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/85 backdrop-blur-sm">
-              <p className="text-sm text-muted-foreground">기본 데이터를 불러오는 중…</p>
+              <p className="text-sm text-muted-foreground">구글 시트를 불러오는 중…</p>
             </div>
           )}
           {branches.length === 0 && !busy && (
@@ -194,14 +224,16 @@ function EmptyOverlay({ onPick }: { onPick: () => void }) {
       <div className="max-w-md space-y-4 text-center">
         <FileSpreadsheet className="mx-auto size-10 text-muted-foreground" />
         <div className="space-y-1.5">
-          <h2 className="text-lg font-semibold">엑셀 파일을 선택해 주세요</h2>
+          <h2 className="text-lg font-semibold">
+            {SHEET_CSV_URL ? '표시할 데이터가 없습니다' : '엑셀 파일을 선택해 주세요'}
+          </h2>
           <p className="text-sm text-muted-foreground">
             첫 행에 <b>지점명, 주소, 장비명, 보유수량, 정상수량, 비정상수량</b> 열이 있으면 됩니다. 열
             순서는 달라도 이름으로 알아서 찾습니다.
           </p>
         </div>
         <Button onClick={onPick}>
-          <Upload /> 엑셀 파일 선택
+          <Upload /> 엑셀 파일로 보기
         </Button>
         <p className="text-xs text-muted-foreground">
           파일은 서버로 전송되지 않고 브라우저 안에서만 처리됩니다.

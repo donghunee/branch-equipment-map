@@ -33,3 +33,6 @@ public/_test2.xlsx
 
 # 앱이 읽는 것은 public/주소정보.xlsx 이므로 루트 사본은 제외
 /주소정보.xlsx
+
+.vercel
+.env*
