@@ -12,8 +12,11 @@ export const SHEET_CSV_URL =
 
 /**
  * 시트를 사람이 직접 열어 수정할 수 있는 주소 (브라우저 주소창의 .../edit 주소).
- * 비어 있으면 '시트 열어 수정' 버튼을 숨긴다.
  *
- * 위 게시 주소의 `2PACX-...` 는 게시 전용 ID 라서 편집 주소를 여기서 유추할 수 없다.
+ * 위 게시 주소의 `2PACX-...` 는 게시 전용 ID 라서 편집 주소를 유추할 수 없다.
+ * 그래서 이 값을 채워두면 그 주소로, 비어 있으면 게시된 읽기 전용 화면으로 연결한다.
  */
 export const SHEET_EDIT_URL = ''
+
+/** 화면에서 '구글 시트' 를 눌렀을 때 열릴 주소. */
+export const SHEET_LINK_URL = SHEET_EDIT_URL || SHEET_CSV_URL.replace(/\?output=csv$/, '')

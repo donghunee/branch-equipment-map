@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { BranchDetailDialog } from '@/components/BranchDetailDialog'
 import { BranchTable } from '@/components/BranchTable'
 import { MapView } from '@/components/MapView'
-import { SHEET_CSV_URL, SHEET_EDIT_URL } from '@/config'
+import { SHEET_CSV_URL, SHEET_LINK_URL } from '@/config'
 import { geocodeBranches } from '@/lib/geocode'
 import { parseFile, parseSheetCsv, type Branch } from '@/lib/parse'
 import { isAbnormal } from '@/lib/status'
@@ -105,14 +105,6 @@ export default function App() {
           </Button>
         )}
 
-        {SHEET_EDIT_URL && (
-          <Button size="sm" variant="outline" asChild>
-            <a href={SHEET_EDIT_URL} target="_blank" rel="noopener noreferrer">
-              <ExternalLink /> 시트 열어 수정
-            </a>
-          </Button>
-        )}
-
         <Button
           size="sm"
           variant={SHEET_CSV_URL ? 'ghost' : 'default'}
@@ -122,12 +114,25 @@ export default function App() {
           <Upload /> 엑셀 파일로 보기
         </Button>
 
-        {fileName && (
-          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <FileSpreadsheet className="size-3.5" />
-            {fileName}
-          </span>
-        )}
+        {fileName &&
+          (fromSheet && SHEET_LINK_URL ? (
+            <a
+              href={SHEET_LINK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="구글 시트를 새 탭에서 엽니다"
+              className="flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:no-underline"
+            >
+              <FileSpreadsheet className="size-3.5" />
+              {fileName}
+              <ExternalLink className="size-3" />
+            </a>
+          ) : (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <FileSpreadsheet className="size-3.5" />
+              {fileName}
+            </span>
+          ))}
 
         {branches.length > 0 && (
           <div className="ml-auto flex items-center gap-2 text-sm">
