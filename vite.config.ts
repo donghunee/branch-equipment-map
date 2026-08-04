@@ -3,13 +3,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// GitHub Pages 는 https://<user>.github.io/<repo>/ 하위에서 서비스되므로 빌드 시 base 가 필요하다.
-const REPO = 'branch-equipment-map'
-
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? `/${REPO}/` : '/',
+// Vercel 은 도메인 루트에서 서비스하므로 base 설정이 필요 없다.
+export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
-}))
+})

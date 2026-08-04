@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "deploy": "npm run build && gh-pages -d dist --dotfiles"
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
@@ -33,10 +33,10 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
-    "gh-pages": "^6.3.0",
     "oxlint": "^1.75.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
+    "vercel": "^58.5.1",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }

@@ -26,3 +26,4 @@ dist-ssr
 # 테스트용 실제 데이터 — 공개 배포에 포함되지 않도록 제외
 public/_test.xlsx
 public/_test2.xlsx
+.vercel

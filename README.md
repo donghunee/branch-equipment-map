@@ -27,7 +27,7 @@ npm install
 npm run dev      # 개발 서버 (http://localhost:5173)
 npx vitest run   # 엑셀 파싱 테스트
 npm run build    # 배포용 빌드 → dist/
-npm run deploy   # 빌드 후 GitHub Pages 에 배포
+npm run deploy   # Vercel 운영 배포 (최초 1회 `npx vercel login` 필요)
 ```
 
 ## 참고 — 주소 정확도
