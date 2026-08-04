@@ -130,3 +130,10 @@ export async function parseFile(file: File): Promise<Branch[]> {
   const buf = await file.arrayBuffer()
   return parseWorkbook(XLSX.read(buf, { type: 'array' }))
 }
+
+/** 앱과 함께 배포된 기본 엑셀을 읽는다. */
+export async function parseUrl(url: string): Promise<Branch[]> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`기본 엑셀 파일을 불러오지 못했습니다 (${res.status})`)
+  return parseWorkbook(XLSX.read(await res.arrayBuffer(), { type: 'array' }))
+}

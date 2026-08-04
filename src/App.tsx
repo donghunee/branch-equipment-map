@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CircleAlert, FileSpreadsheet, MapPinOff, Upload } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -9,28 +9,31 @@ import { BranchDetailDialog } from '@/components/BranchDetailDialog'
 import { BranchTable } from '@/components/BranchTable'
 import { MapView } from '@/components/MapView'
 import { geocodeBranches } from '@/lib/geocode'
-import { parseFile, type Branch } from '@/lib/parse'
+import { parseFile, parseUrl, type Branch } from '@/lib/parse'
 import { isAbnormal } from '@/lib/status'
 
 type Status = 'idle' | 'parsing' | 'geocoding'
 
+/** 앱과 함께 배포되는 기본 데이터. 첫 화면에서 자동으로 불러온다. */
+const DEFAULT_FILE = '주소정보.xlsx'
+
 export default function App() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [selected, setSelected] = useState<Branch | null>(null)
-  const [status, setStatus] = useState<Status>('idle')
+  const [status, setStatus] = useState<Status>('parsing') // 첫 화면부터 기본 데이터를 읽는다
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [fileName, setFileName] = useState('')
+  const [fileName, setFileName] = useState(DEFAULT_FILE)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  async function handleFile(file: File) {
+  async function load(label: string, getBranches: () => Promise<Branch[]>) {
     setError(null)
     setSelected(null)
     setBranches([])
-    setFileName(file.name)
+    setFileName(label)
     setStatus('parsing')
     try {
-      const parsed = await parseFile(file)
+      const parsed = await getBranches()
       setBranches(parsed)
       setStatus('geocoding')
       setProgress({ done: 0, total: parsed.length })
@@ -42,10 +45,23 @@ export default function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setBranches([])
+      throw e
     } finally {
       setStatus('idle')
     }
   }
+
+  // 기본 데이터 자동 로딩. 파일이 없으면 조용히 파일 선택 화면으로 넘어간다.
+  const loadedOnce = useRef(false)
+  useEffect(() => {
+    if (loadedOnce.current) return // StrictMode 이중 실행 방지
+    loadedOnce.current = true
+    load(DEFAULT_FILE, () => parseUrl(`${import.meta.env.BASE_URL}${DEFAULT_FILE}`)).catch(() => {
+      setError(null)
+      setFileName('')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const abnormalBranches = branches.filter(isAbnormal)
   const unlocated = branches.filter((b) => b.geoError)
@@ -64,11 +80,16 @@ export default function App() {
           onChange={(e) => {
             const file = e.target.files?.[0]
             e.target.value = '' // 같은 파일을 다시 골라도 동작하도록
-            if (file) void handleFile(file)
+            if (file) void load(file.name, () => parseFile(file)).catch(() => {})
           }}
         />
-        <Button size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
-          <Upload /> 엑셀 파일 선택
+        <Button
+          size="sm"
+          variant={branches.length > 0 ? 'outline' : 'default'}
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+        >
+          <Upload /> {branches.length > 0 ? '다른 엑셀 파일 선택' : '엑셀 파일 선택'}
         </Button>
 
         {fileName && (
@@ -117,6 +138,11 @@ export default function App() {
       <main className="grid min-h-0 flex-1 lg:grid-cols-[1fr_400px]">
         <div className="relative min-h-[320px]">
           <MapView branches={branches} selected={selected} onSelect={setSelected} />
+          {branches.length === 0 && busy && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/85 backdrop-blur-sm">
+              <p className="text-sm text-muted-foreground">기본 데이터를 불러오는 중…</p>
+            </div>
+          )}
           {branches.length === 0 && !busy && (
             <EmptyOverlay onPick={() => inputRef.current?.click()} />
           )}
